@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+  <title>Dopamine — نظام إدارة المهام</title>
+  <!-- FAVICON inline SVG as data URL -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a0800'/><text y='.9em' font-size='80' x='10'>⚗️</text></svg>"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash" class="splash-screen">
+  <div class="splash-inner">
+    <div class="splash-logo-wrap">
+      <img src="https://i.ibb.co/VY05QxTn/image.png" alt="Dopamine Logo" class="splash-logo-img" onerror="this.style.display='none'"/>
+      <i class="fa-solid fa-flask splash-logo-icon"></i>
+    </div>
+    <h1 class="splash-title">Dopamine</h1>
+    <p class="splash-sub">نظام إدارة مهام الموظفين</p>
+    <div class="splash-loader"><div class="splash-bar"></div></div>
+  </div>
+</div>
+
+<!-- CENTER ALERT (replaces browser dialogs) -->
+<div id="center-alert" class="center-alert hidden">
+  <div class="center-alert-box glass-card animate-in">
+    <div class="center-alert-icon" id="ca-icon"><i class="fa-solid fa-circle-info"></i></div>
+    <div class="center-alert-title" id="ca-title">تنبيه</div>
+    <div class="center-alert-msg" id="ca-msg"></div>
+    <div class="center-alert-actions">
+      <button class="btn-primary" id="ca-ok">حسناً</button>
+      <button class="btn-secondary hidden" id="ca-cancel">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE PREVIEW LIGHTBOX -->
+<div id="lightbox" class="lightbox hidden" onclick="this.classList.add('hidden')">
+  <button class="lightbox-close"><i class="fa-solid fa-xmark"></i></button>
+  <img id="lightbox-img" alt="معاينة"/>
+</div>
+
+<!-- NOTIFICATIONS PANEL -->
+<div id="notif-panel" class="notif-panel hidden">
+  <div class="notif-panel-header">
+    <span><i class="fa-solid fa-bell"></i> التنبيهات</span>
+    <button id="notif-clear-all">مسح الكل</button>
+  </div>
+  <div id="notif-list" class="notif-list"><div class="notif-empty">لا توجد تنبيهات</div></div>
+</div>
+
+<!-- AUTH MODAL -->
+<div id="modal-auth" class="modal-overlay hidden">
+  <div class="modal-box glass-card animate-in">
+    <div class="modal-logo-wrap">
+      <img src="https://i.ibb.co/VY05QxTn/image.png" alt="Logo" class="auth-logo-img" onerror="this.style.display='none'"/>
+      <div class="auth-logo-fallback"><i class="fa-solid fa-flask"></i></div>
+    </div>
+    <h2 id="auth-title">تسجيل الدخول</h2>
+    <p class="modal-sub" id="auth-subtitle">أهلاً بك في Dopamine</p>
+    <div class="form-group hidden" id="auth-name-row">
+      <label><i class="fa-solid fa-user"></i> الاسم الثنائي</label>
+      <input type="text" id="auth-name" placeholder="مثال: محمد أحمد" autocomplete="name"/>
+    </div>
+    <div class="form-group hidden" id="auth-natid-row">
+      <label><i class="fa-solid fa-id-card"></i> الرقم الوطني</label>
+      <input type="text" id="auth-natid" placeholder="أدخل رقمك الوطني"/>
+    </div>
+    <div class="form-group">
+      <label><i class="fa-solid fa-envelope"></i> البريد الإلكتروني</label>
+      <input type="email" id="auth-email" placeholder="example@email.com" dir="ltr" autocomplete="email"/>
+    </div>
+    <div class="form-group" id="auth-pw-row">
+      <label><i class="fa-solid fa-lock"></i> كلمة المرور</label>
+      <div class="pw-wrap">
+        <input type="password" id="auth-password" placeholder="6 أحرف على الأقل" dir="ltr" autocomplete="current-password"/>
+        <button type="button" id="toggle-pw" class="pw-toggle"><i class="fa-solid fa-eye"></i></button>
+      </div>
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+    <div id="auth-success" class="auth-success hidden"></div>
+    <button class="btn-primary btn-full" id="auth-submit-btn">دخول</button>
+    <p id="auth-switch-text" class="auth-switch">
+      ليس لديك حساب؟ <span id="auth-switch-link">سجّل الآن</span>
+    </p>
+    <div class="forgot-pw-wrap" id="forgot-pw-wrap">
+      <button type="button" id="btn-forgot-pw" class="btn-forgot-pw">
+        <i class="fa-solid fa-key"></i> نسيت كلمة المرور؟
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- COMPLETE PROFILE MODAL -->
+<div id="modal-complete-profile" class="modal-overlay hidden">
+  <div class="modal-box glass-card animate-in">
+    <div class="modal-icon"><i class="fa-solid fa-user-pen"></i></div>
+    <h2>أكمل ملفك الشخصي</h2>
+    <p class="modal-sub">البريد: <span id="cp-email" style="color:var(--gold)"></span></p>
+    <div class="form-group">
+      <label><i class="fa-solid fa-user"></i> الاسم الثنائي</label>
+      <input type="text" id="cp-name" placeholder="مثال: محمد أحمد"/>
+    </div>
+    <div class="form-group">
+      <label><i class="fa-solid fa-id-card"></i> الرقم الوطني</label>
+      <input type="text" id="cp-natid" placeholder="أدخل رقمك الوطني"/>
+    </div>
+    <button class="btn-primary btn-full" id="btn-cp-submit">
+      <i class="fa-solid fa-arrow-left"></i> حفظ وبدء الاستخدام
+    </button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- MAIN APP -->
+<div id="app" class="hidden">
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-brand">
+      <img src="https://i.ibb.co/VY05QxTn/image.png" alt="Logo" class="sidebar-brand-img" onerror="this.style.display='none'"/>
+      <span class="sidebar-brand-title">Dopamine</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard"><i class="fa-solid fa-house"></i><span>الرئيسية</span></a>
+      <a href="#" class="nav-item" data-page="new-task"><i class="fa-solid fa-circle-plus"></i><span>مهمة جديدة</span></a>
+      <a href="#" class="nav-item" data-page="my-tasks"><i class="fa-solid fa-list-check"></i><span>مهامي</span></a>
+      <a href="#" class="nav-item admin-only hidden" data-page="admin"><i class="fa-solid fa-gauge-high"></i><span>لوحة الإدارة</span></a>
+      <a href="#" class="nav-item admin-only hidden" data-page="employees"><i class="fa-solid fa-users"></i><span>الموظفون</span></a>
+      <a href="#" class="nav-item admin-only hidden" data-page="monitor"><i class="fa-solid fa-eye"></i><span>المتابعة</span></a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="sidebar-avatar">م</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-name">—</div>
+          <div class="user-role" id="sidebar-role">موظف</div>
+          <div class="user-email" id="sidebar-email"></div>
+        </div>
+      </div>
+      <button class="btn-logout-sidebar" id="btn-logout">
+        <i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج
+      </button>
+    </div>
+  </aside>
+  <div class="sidebar-overlay hidden" id="sidebar-overlay"></div>
+
+  <header class="topbar">
+    <button class="menu-toggle" id="menu-toggle"><i class="fa-solid fa-bars"></i></button>
+    <div class="topbar-brand">
+      <img src="https://i.ibb.co/VY05QxTn/image.png" alt="Logo" class="topbar-brand-img" onerror="this.style.display='none'"/>
+      <span class="topbar-title" id="topbar-title">الرئيسية</span>
+    </div>
+    <div class="topbar-notif" id="notif-bell">
+      <i class="fa-solid fa-bell"></i>
+      <span class="notif-badge hidden" id="notif-badge">0</span>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- DASHBOARD -->
+    <section id="page-dashboard" class="page active">
+      <div class="page-header">
+        <div><h1 id="welcome-msg">مرحباً 👋</h1><p class="page-sub" id="today-date"></p></div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card glass-card"><div class="stat-icon approved"><i class="fa-solid fa-circle-check"></i></div><div class="stat-info"><div class="stat-num" id="stat-approved">0</div><div class="stat-label">مهام معتمدة</div></div></div>
+        <div class="stat-card glass-card"><div class="stat-icon pending"><i class="fa-solid fa-clock"></i></div><div class="stat-info"><div class="stat-num" id="stat-pending">0</div><div class="stat-label">قيد المراجعة</div></div></div>
+        <div class="stat-card glass-card"><div class="stat-icon rejected"><i class="fa-solid fa-circle-xmark"></i></div><div class="stat-info"><div class="stat-num" id="stat-rejected">0</div><div class="stat-label">مهام مرفوضة</div></div></div>
+        <div class="stat-card glass-card"><div class="stat-icon inprogress"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="stat-info"><div class="stat-num" id="stat-inprogress">0</div><div class="stat-label">قيد التنفيذ</div></div></div>
+      </div>
+      <div class="trust-card glass-card">
+        <div class="trust-header"><span><i class="fa-solid fa-star"></i> نسبة الثقة</span><span class="trust-value" id="trust-value">100%</span></div>
+        <div class="trust-bar-bg"><div class="trust-bar-fill" id="trust-bar-fill" style="width:100%"></div></div>
+        <p class="trust-hint">تزداد عند اعتماد المهام وتنخفض عند الرفض</p>
+      </div>
+      <button class="btn-new-task glass-card" id="btn-start-quick">
+        <i class="fa-solid fa-circle-plus"></i><span>بدء مهمة جديدة</span>
+      </button>
+      <div class="section-header"><h3><i class="fa-solid fa-history"></i> آخر المهام</h3></div>
+      <div id="recent-tasks-list" class="task-list-mini"></div>
+    </section>
+
+    <!-- NEW TASK -->
+    <section id="page-new-task" class="page hidden">
+      <div class="page-header"><h1><i class="fa-solid fa-circle-plus"></i> مهمة جديدة</h1></div>
+      <div class="wizard">
+        <div class="wizard-steps">
+          <div class="wstep active" data-step="1"><span>1</span><label>الصنف</label></div>
+          <div class="wstep" data-step="2"><span>2</span><label>قبل</label></div>
+          <div class="wstep" data-step="3"><span>3</span><label>التنفيذ</label></div>
+          <div class="wstep" data-step="4"><span>4</span><label>بعد</label></div>
+          <div class="wstep" data-step="5"><span>5</span><label>الإرسال</label></div>
+        </div>
+
+        <div class="wizard-panel glass-card" id="ws-1">
+          <h3><i class="fa-solid fa-tag"></i> اختر الصنف</h3>
+          <div class="type-grid" id="type-grid">
+            <div class="type-card" data-val="☕ V60"><span class="type-emoji">☕</span><span class="type-name">V60</span></div>
+            <div class="type-card" data-val="☕ فلات وايت"><span class="type-emoji">☕</span><span class="type-name">فلات وايت</span></div>
+            <div class="type-card" data-val="🍫 مولتن شوكلت"><span class="type-emoji">🍫</span><span class="type-name">مولتن شوكلت</span></div>
+            <div class="type-card" data-val="🍩 دونات شوكلت"><span class="type-emoji">🍩</span><span class="type-name">دونات شوكلت</span></div>
+            <div class="type-card" data-val="🌺 آيس كركديه"><span class="type-emoji">🌺</span><span class="type-name">آيس كركديه</span></div>
+            <div class="type-card" data-val="🥪 ساندويتش دجاج بيستو"><span class="type-emoji">🥪</span><span class="type-name">ساندويتش بيستو</span></div>
+            <div class="type-card" data-val="🥐 كروسان حلومي بالزعتر"><span class="type-emoji">🥐</span><span class="type-name">كروسان حلومي</span></div>
+          </div>
+          <input type="hidden" id="task-type"/>
+          <input type="hidden" id="task-store" value="—"/>
+          <p class="type-selected-label hidden" id="type-selected-label"><i class="fa-solid fa-circle-check" style="color:var(--green)"></i> تم اختيار: <strong id="type-selected-val"></strong></p>
+          <button class="btn-primary" id="ws1-next" disabled>التالي <i class="fa-solid fa-arrow-left"></i></button>
+        </div>
+
+        <div class="wizard-panel glass-card hidden" id="ws-2">
+          <h3><i class="fa-solid fa-camera"></i> صورة قبل التنفيذ</h3>
+          <p class="hint-text">ارفع لقطة شاشة — اضغط، اسحب، أو الصق (Ctrl+V)</p>
+          <div class="upload-zone" id="upload-before-zone" tabindex="0">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <p>اضغط أو اسحب أو الصق</p>
+            <span>PNG / JPG / WEBP · تُضغط تلقائياً</span>
+            <input type="file" id="upload-before" accept="image/*" hidden/>
+          </div>
+          <div id="preview-before-wrap" class="preview-wrap hidden">
+            <img id="preview-before" alt="قبل" onclick="window.openLightbox(this.src)"/>
+            <div class="preview-actions">
+              <button class="preview-zoom" onclick="window.openLightbox(document.getElementById('preview-before').src)"><i class="fa-solid fa-magnifying-glass-plus"></i> تكبير</button>
+              <button class="btn-remove-img" id="remove-before"><i class="fa-solid fa-xmark"></i> تغيير</button>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn-secondary" id="ws2-back"><i class="fa-solid fa-arrow-right"></i> السابق</button>
+            <button class="btn-primary" id="ws2-next" disabled>بدء المهمة <i class="fa-solid fa-play"></i></button>
+          </div>
+        </div>
+
+        <div class="wizard-panel glass-card hidden" id="ws-3">
+          <h3><i class="fa-solid fa-spinner fa-spin"></i> المهمة قيد التنفيذ</h3>
+          <div class="task-id-display"><span>رقم المهمة:</span><strong id="current-task-id">—</strong></div>
+          <div class="timer-display"><i class="fa-solid fa-stopwatch"></i><span id="live-timer">00:00:00</span></div>
+          <div class="task-info-summary" id="task-info-summary"></div>
+          <div class="pause-box" id="pause-box">
+            <div class="pause-box-label"><i class="fa-solid fa-pause"></i> موقوف مؤقتاً — الوقت المنقضي:</div>
+            <div class="pause-box-time" id="pause-elapsed">00:00:00</div>
+            <div class="pause-box-note">سيُحتسب وقت الإيقاف تلقائياً</div>
+          </div>
+          <div class="step3-actions">
+            <button class="btn-pause" id="btn-pause"><i class="fa-solid fa-pause"></i> إيقاف مؤقت</button>
+            <button class="btn-resume hidden" id="btn-resume"><i class="fa-solid fa-play"></i> استئناف</button>
+            <button class="btn-later" id="btn-complete-later"><i class="fa-solid fa-clock-rotate-left"></i> إكمال لاحقاً</button>
+          </div>
+          <p class="hint-text" style="margin-top:10px;text-align:center">نفّذ المهمة داخل اللعبة الآن.</p>
+          <button class="btn-primary btn-full" id="ws3-done"><i class="fa-solid fa-flag-checkered"></i> انتهيت من التنفيذ</button>
+        </div>
+
+        <div class="wizard-panel glass-card hidden" id="ws-4">
+          <h3><i class="fa-solid fa-camera-retro"></i> صورة بعد التنفيذ</h3>
+          <p class="hint-text">ارفع لقطة شاشة تُظهر النتيجة — اضغط، اسحب، أو الصق</p>
+          <div class="upload-zone" id="upload-after-zone" tabindex="0">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <p>اضغط أو اسحب أو الصق</p>
+            <span>PNG / JPG / WEBP · تُضغط تلقائياً</span>
+            <input type="file" id="upload-after" accept="image/*" hidden/>
+          </div>
+          <div id="preview-after-wrap" class="preview-wrap hidden">
+            <img id="preview-after" alt="بعد" onclick="window.openLightbox(this.src)"/>
+            <div class="preview-actions">
+              <button class="preview-zoom" onclick="window.openLightbox(document.getElementById('preview-after').src)"><i class="fa-solid fa-magnifying-glass-plus"></i> تكبير</button>
+              <button class="btn-remove-img" id="remove-after"><i class="fa-solid fa-xmark"></i> تغيير</button>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn-secondary" id="ws4-back"><i class="fa-solid fa-arrow-right"></i> السابق</button>
+            <button class="btn-primary" id="ws4-next" disabled>التالي <i class="fa-solid fa-arrow-left"></i></button>
+          </div>
+        </div>
+
+        <div class="wizard-panel glass-card hidden" id="ws-5">
+          <h3><i class="fa-solid fa-paper-plane"></i> مراجعة وإرسال</h3>
+          <div class="review-grid" id="review-grid"></div>
+          <div class="compare-mini">
+            <div class="compare-mini-img"><span>قبل</span><img id="review-before" alt="قبل" onclick="window.openLightbox(this.src)"/></div>
+            <div class="compare-mini-img"><span>بعد</span><img id="review-after" alt="بعد" onclick="window.openLightbox(this.src)"/></div>
+          </div>
+          <button class="btn-primary btn-full" id="ws5-submit"><i class="fa-solid fa-paper-plane"></i> إرسال للمراجعة</button>
+        </div>
+
+        <div class="wizard-panel glass-card hidden" id="ws-done">
+          <div class="success-anim"><div class="success-circle"><i class="fa-solid fa-check"></i></div></div>
+          <h3 style="text-align:center">تم الإرسال بنجاح! 🎉</h3>
+          <p class="hint-text" style="text-align:center">ستصلك إشعارات عند اعتماد أو رفض المهمة.</p>
+          <button class="btn-primary btn-full" id="btn-new-another"><i class="fa-solid fa-plus"></i> مهمة جديدة أخرى</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MY TASKS -->
+    <section id="page-my-tasks" class="page hidden">
+      <div class="page-header">
+        <h1><i class="fa-solid fa-list-check"></i> مهامي</h1>
+        <select id="my-filter-status" class="filter-select">
+          <option value="">كل الحالات</option>
+          <option value="pending">قيد المراجعة</option>
+          <option value="approved">معتمدة</option>
+          <option value="rejected">مرفوضة</option>
+          <option value="inprogress">قيد التنفيذ</option>
+          <option value="assigned">مُسندة</option>
+        </select>
+      </div>
+      <div class="search-filter-bar glass-card" style="margin-bottom:16px">
+        <div class="search-input-wrap">
+          <i class="fa-solid fa-search"></i>
+          <input type="text" id="my-search" placeholder="بحث برقم المهمة أو الصنف..."/>
+        </div>
+      </div>
+      <div id="my-tasks-list" class="tasks-grid"></div>
+      <div class="pagination-bar" id="my-tasks-pagination"></div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="page-admin" class="page hidden">
+      <div class="page-header">
+        <h1><i class="fa-solid fa-gauge-high"></i> لوحة الإدارة</h1>
+        <button class="btn-primary admin-only hidden" id="btn-assign-task" style="font-size:13px;padding:9px 18px">
+          <i class="fa-solid fa-paper-plane"></i> إرسال مهمة لموظف
+        </button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card glass-card"><div class="stat-icon pending"><i class="fa-solid fa-clock"></i></div><div class="stat-info"><div class="stat-num" id="adm-stat-pending">0</div><div class="stat-label">بانتظار المراجعة</div></div></div>
+        <div class="stat-card glass-card"><div class="stat-icon approved"><i class="fa-solid fa-check"></i></div><div class="stat-info"><div class="stat-num" id="adm-stat-approved">0</div><div class="stat-label">معتمدة</div></div></div>
+        <div class="stat-card glass-card"><div class="stat-icon rejected"><i class="fa-solid fa-xmark"></i></div><div class="stat-info"><div class="stat-num" id="adm-stat-rejected">0</div><div class="stat-label">مرفوضة</div></div></div>
+        <div class="stat-card glass-card"><div class="stat-icon inprogress"><i class="fa-solid fa-calendar-day"></i></div><div class="stat-info"><div class="stat-num" id="adm-stat-today">0</div><div class="stat-label">مهام اليوم</div></div></div>
+      </div>
+      <div class="admin-extra-stats glass-card">
+        <div class="extra-stat"><i class="fa-solid fa-stopwatch"></i><div><div id="adm-avg-time">—</div><small>متوسط مدة الإنجاز</small></div></div>
+        <div class="extra-stat"><i class="fa-solid fa-trophy"></i><div><div id="adm-top-emp">—</div><small>أكثر موظف إنجازاً</small></div></div>
+        <div class="extra-stat"><i class="fa-solid fa-store"></i><div><div id="adm-top-store">—</div><small>أكثر صنف طُلب</small></div></div>
+      </div>
+      <div class="search-filter-bar glass-card">
+        <div class="search-input-wrap"><i class="fa-solid fa-search"></i><input type="text" id="adm-search" placeholder="بحث بالاسم، رقم المهمة..."/></div>
+        <select id="adm-filter-status"><option value="">كل الحالات</option><option value="pending">قيد المراجعة</option><option value="approved">معتمدة</option><option value="rejected">مرفوضة</option></select>
+        <select id="adm-filter-type"><option value="">كل الأصناف</option><option>☕ V60</option><option>☕ فلات وايت</option><option>🍫 مولتن شوكلت</option><option>🍩 دونات شوكلت</option><option>🌺 آيس كركديه</option><option>🥪 ساندويتش دجاج بيستو</option><option>🥐 كروسان حلومي بالزعتر</option></select>
+      </div>
+      <div id="admin-tasks-list" class="tasks-grid"></div>
+      <div class="pagination-bar" id="admin-tasks-pagination"></div>
+    </section>
+
+    <!-- EMPLOYEES -->
+    <section id="page-employees" class="page hidden">
+      <div class="page-header">
+        <h1><i class="fa-solid fa-users"></i> الموظفون</h1>
+        <button class="btn-primary admin-only hidden" onclick="window.openAssignModal()" style="font-size:13px;padding:9px 18px">
+          <i class="fa-solid fa-paper-plane"></i> إرسال مهمة
+        </button>
+      </div>
+      <div class="search-filter-bar glass-card" style="margin-bottom:16px">
+        <div class="search-input-wrap"><i class="fa-solid fa-search"></i><input type="text" id="emp-search" placeholder="بحث بالاسم أو الرقم الوطني..."/></div>
+      </div>
+      <div id="employees-list" class="employees-grid"></div>
+      <div class="pagination-bar" id="emp-pagination"></div>
+    </section>
+
+    <!-- MONITOR -->
+    <section id="page-monitor" class="page hidden">
+      <div class="page-header">
+        <h1><i class="fa-solid fa-eye"></i> متابعة النشاط</h1>
+        <p class="page-sub">سجل كامل لحظي لكل حدث</p>
+      </div>
+      <div class="search-filter-bar glass-card" style="margin-bottom:16px">
+        <div class="search-input-wrap"><i class="fa-solid fa-search"></i><input type="text" id="mon-search" placeholder="بحث بالاسم أو الإجراء..."/></div>
+        <select id="mon-filter-action">
+          <option value="">كل الإجراءات</option>
+          <option value="login">تسجيل دخول</option>
+          <option value="logout">تسجيل خروج</option>
+          <option value="register">تسجيل حساب</option>
+          <option value="start_task">بدء مهمة</option>
+          <option value="submit_task">إرسال مهمة</option>
+          <option value="approve_task">اعتماد</option>
+          <option value="reject_task">رفض</option>
+          <option value="assign_task">إسناد مهمة</option>
+          <option value="delete_task">حذف مهمة</option>
+          <option value="role_change">تغيير صلاحية</option>
+          <option value="delete_user">حذف موظف</option>
+        </select>
+      </div>
+      <div id="monitor-list" class="log-list"></div>
+      <div class="pagination-bar" id="mon-pagination"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- TASK MODAL -->
+<div id="modal-task" class="modal-overlay hidden">
+  <div class="modal-box modal-task-box glass-card animate-in">
+    <button class="modal-close" id="modal-task-close"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-task-content"></div>
+  </div>
+</div>
+
+<!-- EMPLOYEE MODAL -->
+<div id="modal-employee" class="modal-overlay hidden">
+  <div class="modal-box modal-emp-box glass-card animate-in">
+    <button class="modal-close" id="modal-emp-close"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-emp-content"></div>
+  </div>
+</div>
+
+<!-- ASSIGN TASK MODAL -->
+<div id="modal-assign" class="modal-overlay hidden">
+  <div class="modal-box glass-card animate-in" style="max-width:480px">
+    <button class="modal-close" id="modal-assign-close"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-icon" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold))"><i class="fa-solid fa-paper-plane"></i></div>
+    <h2 style="color:var(--gold-light)">إرسال مهمة لموظف</h2>
+    <p class="modal-sub">المهمة ستصل فوراً مع إشعار</p>
+    <div class="assign-target-badge"><i class="fa-solid fa-user"></i><span id="assign-target-name">اختر موظفاً</span></div>
+    <div class="form-group" style="margin-top:14px">
+      <label><i class="fa-solid fa-users"></i> الموظف</label>
+      <select id="assign-emp-select"><option value="">اختر الموظف...</option></select>
+    </div>
+    <div class="form-group">
+      <label><i class="fa-solid fa-tag"></i> الصنف</label>
+      <select id="assign-type"><option value="">اختر الصنف...</option><option>☕ V60</option><option>☕ فلات وايت</option><option>🍫 مولتن شوكلت</option><option>🍩 دونات شوكلت</option><option>🌺 آيس كركديه</option><option>🥪 ساندويتش دجاج بيستو</option><option>🥐 كروسان حلومي بالزعتر</option></select>
+    </div>
+    <div class="form-group">
+      <label><i class="fa-solid fa-hashtag"></i> الكمية المطلوبة</label>
+      <input type="number" id="assign-qty" placeholder="مثال: 1000" min="1"/>
+    </div>
+    <div class="form-group">
+      <label><i class="fa-solid fa-note-sticky"></i> ملاحظة (اختياري)</label>
+      <input type="text" id="assign-note" placeholder="أي تعليمات إضافية..."/>
+    </div>
+    <button class="btn-primary btn-full" id="btn-assign-submit" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--bg-0)">
+      <i class="fa-solid fa-paper-plane"></i> إرسال المهمة
+    </button>
+  </div>
+</div>
+
+<script type="module" src="js/firebase-config.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
